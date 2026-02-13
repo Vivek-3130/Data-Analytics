@@ -109,6 +109,125 @@ WHERE row_num > 1; -- Nothing will come as there exist no duplictaes
 SELECT *
 FROM layoffs_staging2;
 
--- ------------------------STANDARDIZING TABLE----------------------- --
+-- ------------------------STANDARDIZING TABLE------------
+
+-- I also noticed the Crypto has multiple different variations. We need to standardize that - let's say all to Crypto
+SELECT DISTINCT industry
+FROM world_layoffs.layoffs_staging2
+ORDER BY industry;
+
+UPDATE layoffs_staging2
+SET industry = 'Crypto'
+WHERE industry IN ('Crypto Currency', 'CryptoCurrency');
+
+-- now that's taken care of:
+SELECT DISTINCT industry
+FROM world_layoffs.layoffs_staging2
+ORDER BY industry;
+
+
+-- everything looks good except apparently we have some "United States" and some "United States." with a period at the end. Let's standardize this.
+SELECT DISTINCT country
+FROM world_layoffs.layoffs_staging2
+ORDER BY country;
+
+UPDATE layoffs_staging2
+SET country = TRIM(TRAILING '.' FROM country); -- Trailing removw the ' . ' dot character from the country name
+
+-- now if we run this again it is fixed
+SELECT DISTINCT country
+FROM world_layoffs.layoffs_staging2
+ORDER BY country;
+
+-- Let's also fix the date columns: As the data type is text and it won't help in the visulaisation time series part
+SELECT `date`
+FROM layoffs_staging2;
+
+UPDATE layoffs_staging2
+SET `date` = STR_TO_DATE(`date`,'%m/%d/%Y'); -- From here the text format of dsate is converted to the date
+
+SELECT `date`
+FROM layoffs_stagingdate2;
+
+ALTER TABLE layoffs_staging2
+MODIFY COLUMN `date` DATE; -- This will covert the format to date
+
+SELECT * 
+FROM layoffs_staging2;
+
+-- Let's work in removing the null values from the table
+SELECT *
+FROM layoffs_staging2
+WHERE total_laid_off IS NULL
+AND percentage_laid_off IS NULL; -- First step is checking the number as null
+
+SELECT *
+FROM layoffs_staging2
+WHERE industry IS NULL 
+OR industry = ''; -- Checking where the industry in not mentioned and having values NULL
+
+SELECT *
+FROM layoffs_staging2
+WHERE company = 'Airbnb'; -- So int the part of industry in some paces it is travel and in other its blank we will replace blank with travel
+
+UPDATE layoffs_staging2
+SET industry = NULL
+WHERE industry =''; -- Coverting the blanks to null
+
+-- For that we will we using the joins
+SELECT t1.industry , t2.industry
+FROM layoffs_staging2 t1
+JOIN layoffs_staging2 t2
+ON t1.company=t2.company  -- Here as for join their shoud be one or two common so we have location and company common
+WHERE t1.industry IS NULL
+AND t2.industry IS NOT NULL;
+
+UPDATE layoffs_staging2 t1
+JOIN layoffs_staging2 t2
+ON t1.company = t2.company
+SET t1.industry = t2.industry -- Removing the null from the industry of t2 where it is travel fot the airbnb - join se sb kuch me update ho jayega
+WHERE t1.industry IS NULL
+AND t2.industry IS NOT NULL;
+
+-- Lets work with the null values of the percentage and total laid off
+SELECT *
+FROM layoffs_staging2
+WHERE total_laid_off IS NULL
+AND percentage_laid_off IS NULL; -- Checking the data where it is null
+
+DELETE FROM layoffs_staging2
+WHERE total_laid_off IS NULL
+AND percentage_laid_off IS NULL; -- Deleting the data where it is null
+
+
+-- Now removing the row_num as there is no use here
+ALTER TABLE layoffs_staging2
+DROP COLUMN row_num;
+
+SELECT *
+FROM layoffs_staging2;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
